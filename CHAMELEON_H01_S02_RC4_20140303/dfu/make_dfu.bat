@@ -1,0 +1,2 @@
+..\..\..\tools\dfu\dfubuild -v -pedantic -t 3 -f CHAMELEON_H01_S02_RC4_20140303.dfu -uv 0xa12 -up 1 -ui "CHAMELEON FIRMWARE UPGRADE" -s ..\..\..\firmware\assisted\unified\gordon\stack_unsigned.xpv -h ..\image.fs -p3 . ..\STACK.psr ..\CONFIG.psr
+pause

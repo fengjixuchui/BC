@@ -1,0 +1,706 @@
+/****************************************************************************
+Copyright (C) Cambridge Silicon Radio Ltd. 2004-2013
+
+FILE NAME
+    sink_private.h
+    
+DESCRIPTION
+    
+*/
+
+/*!
+
+@file   sink_private.h
+@brief The private data structures used by the sink device application
+    
+    THe main application task and global data is declared here
+*/
+
+
+#ifndef _SINK_PRIVATE_H_
+#define _SINK_PRIVATE_H_
+
+
+#ifdef INCLUDE_A2DP_EXTRA_CODECS
+#ifndef INCLUDE_MP3
+#define INCLUDE_MP3
+#endif
+#ifndef INCLUDE_AAC
+#define INCLUDE_AAC
+#endif
+#ifndef INCLUDE_FASTSTREAM
+#define INCLUDE_FASTSTREAM
+#endif
+#ifndef INCLUDE_APTX
+#define INCLUDE_APTX
+#endif
+#endif /* INCLUDE_A2DP_EXTRA_CODECS */
+
+
+#if defined(ENABLE_USB) && defined(ENABLE_USB_AUDIO)
+/* Needed to include csr_usb_decoder_plugin in csr_a2dp_decoder_common_plugin.h */
+#define INCLUDE_USB
+#endif
+
+#include <connection.h>
+#include <hfp.h>
+#include <usb_device_class.h>
+#include <message.h>
+#include <app/message/system_message.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <charger.h>
+#include <audio.h>
+#include <csr_cvc_common_plugin.h>
+#include <codec.h>
+
+#ifdef ENABLE_SUBWOOFER
+#include <swat.h>
+#endif
+
+#include "sink_volume.h"
+#include "sink_buttonmanager.h"
+    /*needed for the LED manager task definition*/
+#include "sink_leddata.h"
+#include "sink_powermanager.h"
+#include "sink_volume.h"
+#include "sink_usb.h"
+#include "sink_debug.h"
+#include "sink_inquiry.h"
+#include "sink_configmanager.h"
+#include "sink_wired.h"
+#include "sink_a2dp.h"
+#include "sink_audio_routing.h"
+
+#include "sink_fm.h"
+
+#ifdef ENABLE_GAIA
+#include "sink_gaia.h"
+#endif
+
+#ifdef ENABLE_PBAP
+#include "sink_pbap.h"
+#endif
+#ifdef ENABLE_MAPC
+#include "sink_mapc.h"
+#endif
+    
+#include "sink_a2dp.h"
+
+#ifdef ENABLE_AVRCP
+#include "sink_avrcp.h"
+#endif
+
+
+/*needed for the AUDIO_SINK_T*/
+#include <audio.h>
+/*needed for the a2dp plugin AudioConnect params*/
+#include <csr_a2dp_decoder_common_plugin.h>
+
+
+/*the number of AT commands we support sending on given events*/
+#define MAX_AT_COMMANDS_TO_SEND (8)
+
+
+/*! 
+    @brief Class Of Device definitions 
+*/
+#define AUDIO_MAJOR_SERV_CLASS  0x200000
+#define AV_MAJOR_DEVICE_CLASS   0x000400
+#define AV_MINOR_HEADSET        0x000004
+#define AV_MINOR_MICROPHONE     0x000010
+#define AV_MINOR_SPEAKER        0x000014
+#define AV_MINOR_HEADPHONES     0x000018
+#define AV_MINOR_PORTABLE       0x00001c
+#define AV_MINOR_HIFI           0x000028
+#define AV_COD_RENDER           0x040000
+#define AV_COD_CAPTURE          0x080000
+
+/* Bootmodes */
+#define BOOTMODE_DFU            0x00
+#define BOOTMODE_DEFAULT        0x01
+#define BOOTMODE_CUSTOM         0x02
+#define BOOTMODE_USB_LOW_POWER  0x03
+#define BOOTMODE_CVC_PRODTEST   0x04
+#define BOOTMODE_ALT_FSTAB      0x05
+
+
+/* swap between profiles, when called with primary will return secondary and vice versa */
+#define OTHER_PROFILE(x) (x ^ 0x3)
+
+/* hfp profiles have offset of 1, this needs to be removed to be used as index into data array */
+#define PROFILE_INDEX(x) ((x == hfp_invalid_link) ? (0) : (x - 1))
+        
+/*! 
+    @brief Feature Block
+    
+    Please refer to the device configuration user guide document for details on the 
+    features listed here 
+*/
+typedef struct
+{
+    unsigned    ReconnectOnPanic:1; 
+    unsigned    OverideFilterPermanentlyOn:1 ;
+    unsigned    MuteSpeakerAndMic:1 ;
+    unsigned    PlayTonesAtFixedVolume:1 ;
+    
+    unsigned    PowerOffAfterPDLReset:1 ;
+    unsigned    RemainDiscoverableAtAllTimes:1;
+    unsigned    DisablePowerOffAfterPowerOn:1;
+    unsigned    AutoAnswerOnConnect:1;
+
+    unsigned    EnterPairingModeOnFailureToConnect:1 ;
+    unsigned    unused1:2;
+    unsigned    AdjustVolumeWhilstMuted:1; /*whether or not to update the global vol whilst muted*/   
+    
+    unsigned    VolumeChangeCausesUnMute:1 ;/*whether or not to unmute if a vol msg is received*/
+    unsigned    PowerOffOnlyIfVRegEnLow:1;    
+    unsigned    LimitRssiSuboowferPairing:1; /* Enable subwoofer RSSI pairing to ensure signal strenght is higher than the configured threshold */
+    unsigned    pair_mode_en:1;
+    
+     /*---------------------------*/           
+    unsigned    GoConnectableButtonPress:1;    
+    unsigned    DisableTTSTerminate:1;   
+    unsigned    AutoReconnectPowerOn:1 ;
+    unsigned    speech_rec_enabled:1 ;
+    unsigned    SeparateLNRButtons:1 ;
+    unsigned    SeparateVDButtons: 1;
+    unsigned    gatt_enabled:2;
+    unsigned    PowerDownOnDiscoTimeout: 2;
+    unsigned    ActionOnCallTransfer:2;    
+    unsigned    LedTimeMultiplier: 2; /* multiply the times of the LED settings (x1 x2 x4 x8) */
+    unsigned    ActionOnPowerOn:2;
+    
+     /*---------------------------*/   
+
+    unsigned    DiscoIfPDLLessThan:4 ; 
+    
+    unsigned    DoNotDiscoDuringLinkLoss:1;
+    unsigned    ManInTheMiddle:1;
+    unsigned    UseDiffConnectedEventAtPowerOn:1;    
+    unsigned    EncryptOnSLCEstablishment:1 ;    
+    
+    unsigned    UseLowPowerAudioCodecs:1;
+    unsigned    PlayLocalVolumeTone:1;   
+    unsigned    SecurePairing:1;
+    unsigned    UseI2SOutputCapability:1;   /* feature to enable I2S output from dsp apps to drive external I2S DAC/amp */
+    
+    unsigned    QueueVolumeTones:1;
+    unsigned    QueueEventTones:1;
+    unsigned    QueueLEDEvents:1;
+    unsigned    MuteToneFixedVolume:1;  /* play mute tone at default volume level when set */
+
+     /*---------------------------*/   
+    
+    unsigned    ResetLEDEnableStateAfterReset:1;    /* if set the LED disable state is reset after boot */
+    unsigned    ResetAfterPowerOffComplete:1 ;
+    unsigned    AutoPowerOnAfterInitialisation:1 ;  
+    unsigned    DisableRoleSwitching:1;     /* disable the device role switching in multipoint connections */
+    unsigned    audio_sco:1;    /* See B-34179: Transfer audio from ag to device directly with a SCO */
+    unsigned    audio_plugin:3; /* which of the audio plugins we want to use */
+    
+    unsigned    DefaultVolume:4 ;     
+    unsigned    IgnoreButtonPressAfterLedEnable:1 ; /* if set the button press that enabled the LED's is ignored */
+    unsigned    LNRCancelsVoiceDialIfActive:1 ; 
+    unsigned    GoConnectableDuringLinkLoss:1 ; 
+    unsigned    stereo:1 ;        /*mono or stereo connection*/
+    
+    /*------------------------------*/
+    unsigned    ChargerTerminationLEDOveride:1; /* used to force trickle led on when full and stop led toggling */
+    unsigned    FixedToneVolumeLevel:5;         /* the level at which the tones are played when using the play at fixed level */
+    unsigned    EnableAvrcpAudioSwitching:1 ;   /* use AVRCP play status to speed up audio source switching */
+    unsigned    ForceEV3S1ForSco2:1;            /* force use of EV3 safe settings for second sco */
+    unsigned    VoicePromptPairing:1;           /* Read out PIN/Passkey/Confirmation using voice prompts */
+    unsigned    avrcp_enabled:1;                  
+    unsigned    PairIfPDLLessThan: 2;           /* Use RSSI on inquiry responses to pair to nearest AG */
+    unsigned    EnableSyncMuteMicrophones: 1;
+    unsigned    ActionOnPanicReset: 2 ;                
+    unsigned    VoicePromptNumbers:1;           /* Read out numbers using voice prompts */
+    
+    /*------------------------------*/
+    unsigned    DefaultA2dpVolLevel:4 ;         /* Default A2dp Vol Level */
+    unsigned    pbap_enabled: 1 ;
+    unsigned    EnableA2dpStreaming:1 ;         /* Enable A2DP streaming  */
+    unsigned    A2dpOptionalCodecsEnabled:5;    /* Optional A2DP codecs */
+    unsigned    EnableA2dpMediaOpenOnConnection:1;/*if enable will open media channel on a2dp connect */  
+    unsigned    AssumeAutoSuspendOnCall:1;      /* Assume a device that supports both HF and A2DP will suspend itself in a non-idle call state */
+    unsigned    ReconnectLastAttempts:3;        /* Number of times to attempt to connect last AG */
+
+}feature_config_type;
+
+#define TONE_NOT_DEFINED 0
+
+/*!
+    @brief the volume mapping structure - one for each volume level
+*/
+typedef struct  VolMappingTag
+{
+        /*! The hfp volume level to go to when volume up is pressed*/
+    unsigned       IncVol:4;
+        /*! The hfp volume level to go to when volume down is pressed*/
+    unsigned       DecVol:4;
+        /*! The tone associated with a given volume level*/
+    unsigned       Tone:8;  
+        /*! The a2dp gain index to use for the given volume level */
+    unsigned       A2dpGain:8;
+       /*! the hfp DAC gain to use for the given volume level */
+    unsigned       VolGain:8;    
+    
+}VolMapping_t ;
+
+#define NUM_FIXED_TONES            (94)    
+#define MAX_NUM_VARIABLE_TONES     (8)
+
+typedef struct VarTonesDataTag
+{
+    ringtone_note    *gVariableTones;    
+}ConfigTone_t;
+
+/*!
+    @brief Block containing the PIOs assigned to fixed events the bit fields define if a PIO has been set
+*/
+typedef struct PIO_block_t
+{
+    unsigned    CallActivePIO:8   ;
+    unsigned    IncomingRingPIO:8 ;   
+    unsigned    OutgoingRingPIO:8 ;
+    unsigned    DeviceAudioActivePIO:8;
+    
+    unsigned    PowerOnPIO:8      ;
+    unsigned    unused:8;
+    unsigned    LedEnablePIO:8 ;
+    unsigned    unused1:8;
+    
+} PIO_block_t ;
+
+typedef struct
+{
+    unsigned reserved:8;
+    unsigned wired_input:8;
+    unsigned charger_input:8;
+    unsigned dut_pio:8;
+}input_pio_config_type;
+
+typedef struct
+{
+    input_pio_config_type   pio_inputs;
+    PIO_block_t             pio_outputs;
+    uint32                  pio_invert;      /* bit mask used to invert button pios, 1 = inverted */
+    const common_mic_params digital;         /* Digitial mic enables/PIOs */
+    uint32                  pio_map;         /* Pins to map (see PioSetMapPins32 in pio.h) */
+}pio_config_type;
+
+/* Radio configuration data */
+typedef struct
+{
+    uint16  page_scan_interval;
+    uint16  page_scan_window;
+    uint16  inquiry_scan_interval;
+    uint16  inquiry_scan_window;
+}radio_config_type;
+
+#define HFP_ADDITIONAL_AUDIO_PARAMS_ENABLED 0x8000U
+
+typedef struct 
+{
+    /* Enable use of audio params */
+    unsigned            additional_audio_params:1;
+    unsigned            unused:5;
+    /* Supported packet types */
+    sync_pkt_type       packet_types:10;
+    /* Audio parameters */
+    hfp_audio_params    audio_params;
+} HFP_features_type ;
+
+    /*the application timeouts / counts */
+typedef struct TimeoutsTag
+{
+    uint16 AutoSwitchOffTime_s ;
+    uint16 LimboTimeout_s ;
+    uint16 NetworkServiceIndicatorRepeatTime_s ;    
+    uint16 DisablePowerOffAfterPowerOnTime_s ;
+    uint16 PairModeTimeout_s ;
+    uint16 MuteRemindTime_s ;
+    uint16 ConnectableTimeout_s ;   
+    uint16 PairModeTimeoutIfPDL_s;
+    uint16 ReconnectionAttempts ;       /* number of times to try and reconnect before giving up */
+    uint16 EncryptionRefreshTimeout_m ;
+    uint16 InquiryTimeout_s ;
+    uint16 SecondAGConnectDelayTime_s;
+    uint16 MissedCallIndicateTime_s ;  /* The period in second between two indications */
+    uint16 MissedCallIndicateAttemps ; /* number of times to indicate before stopping indication */
+    uint16 A2dpLinkLossReconnectionTime_s; /* the amount of time in seconds to attempt to reconnect a2dp */
+    uint16 LanguageConfirmTime_s;   /* The time between EventSelectTTSLanguageMode and storing the language in PS */
+    uint16 SpeechRecRepeatTime_ms;  /* the between voice prompts ASR restarts */
+}Timeouts_t ;
+
+#define MAX_POWER_TABLE_ENTRIES 8
+
+typedef struct
+{
+    unsigned        normalRole:2;       /* Master (0), Slave (1) or passive (2) */
+    unsigned        normalEntries:2;    /* 0-2 */
+
+    unsigned        SCORole:2;          /* Master (0), Slave (1) or passive (2) */
+    unsigned        SCOEntries:2;       /* 0-2 */
+  
+    unsigned        A2DPStreamRole:2;   /* Master (0), Slave (1) or passive (2) */
+    unsigned        A2DPStreamEntries:2;/* 0-2 */
+       
+    /* pointers to arrays of lp_power_tables */
+    lp_power_table powertable[1];
+
+} power_table;
+
+
+typedef struct
+{
+    uint16          max_remote_latency;
+    uint16          min_remote_timeout;
+    uint16          min_local_timeout;
+} ssr_params;
+
+
+typedef struct
+{
+    ssr_params      slc_params;
+    ssr_params      sco_params;
+} subrate_t;
+
+typedef enum
+{
+    hfp_no_hf_initiated_audio_transfer,
+    hfp_usual_hf_initiated_audio_transfer,
+    hfp_power_on_hf_initiated_audio_transfer
+} hfp_hf_initiated_audio_transfer_type;
+
+#define MAX_MULTIPOINT_CONNECTIONS  2        /* max number of mulitpoint connections  */
+#define MAX_A2DP_CONNECTIONS        2        
+#define MAX_PROFILES                2
+
+typedef struct                              /* 1 word of storage for hfp status info */
+{
+    unsigned        list_id:8;               /* store the PDL list ID for this connection, used for link loss and preventing reconnection */
+    unsigned        local_call_action:1;     /* call answered/rejected locally */
+    unsigned        connected:1;             /* flag to signifiy that profile[?] is connected */
+}profile_status_info;
+
+/* this is the list of sco audio priorities, it is used to determine which audio is routed by the
+   device in multipoint situations, the further up the list will get routed first so be careful
+   not to change the order without careful thought of the implications of doing so */
+typedef enum
+{
+    sco_none,
+    sco_about_to_disconnect,
+    sco_streaming_audio,
+    sco_inband_ring,
+    sco_held_call,
+    sco_active_call    
+}audio_priority;
+        
+typedef struct                              /* storage of audio connection data on a per hfp isntance basis */
+{
+    audio_priority      sco_priority;        /* the priority level of the sco */
+    uint32              tx_bandwidth;       
+    sync_link_type      link_type:2;          /* link type may be different between AG's and needs to be stored for reorouting audio */
+    hfp_wbs_codec_mask  codec_selected:6; /* audio codec being used with this profile */
+    unsigned            gSMVolumeLevel:7;   /* volume level for this profile */
+    unsigned            gMuted:1;
+}profile_audio_info;
+
+typedef struct 
+{
+    profile_status_info status;         /* status for each profile, in hfp index order */
+    profile_audio_info  audio;           /* audio connection details used for re-routing audio */   
+}profile_data_t ;
+
+#ifdef ENABLE_SUBWOOFER
+typedef struct
+{
+    bdaddr          bd_addr;        /* Store the subwoofers Bluetooth address */
+    
+    unsigned        dev_id:4;       /* Store the subwoofer device ID for SWAT */
+    unsigned        sub_trim_idx:8; /* Used to store the current sub_trim index value */
+    unsigned        check_pairing:1;/* Flag set when a subwoofer exists as the only PDL so start pairing */
+    
+    unsigned        sub_trim:8;     /* 8 bits used to keep track of the subwoofer trim gain */
+    unsigned        swat_volume:8;  /* 8 bits used to keep track of the SWAT system volume */
+    
+    unsigned        inquiry_attempts:8; /* number of times to try an inquiry scan */
+    
+} subwooferData_t;
+#endif
+
+#ifdef ENABLE_GAIA
+/*  Gaia settings  */
+typedef struct
+{
+    GAIA_TRANSPORT *gaia_transport;
+    
+    uint32 pio_change_mask;
+    uint32 pio_old_state;
+    ringtone_note *alert_tone;
+    
+    unsigned notify_ui_event:1;
+    unsigned notify_charger_connection:1;
+    unsigned notify_battery_charged:1;
+    unsigned notify_speech_rec:1;
+    unsigned unused:12;
+    
+} gaia_settings_t;
+#endif
+
+/* Remote control state */
+typedef enum
+{
+    hgs_starting,
+    hgs_idle,
+    hgs_scan,
+    hgs_connecting,
+    hgs_discovery,
+    hgs_connected
+    
+} hs_rc_state;
+
+typedef struct
+{
+   TaskData task;
+   uint16 cid;
+   hs_rc_state state:4;
+   unsigned spare:12;
+#ifdef ENABLE_SOUNDBAR
+    typed_bdaddr bdAddr;
+#ifdef ENABLE_AVRCP
+    bool avrcpRwdButtonPress;
+    bool avrcpFFButtonPress;
+#endif
+#endif
+   uint16 report_handle;
+} remote_control;
+
+/* runtime data stored in block */
+typedef struct
+{
+#ifdef ENABLE_GAIA    
+    gaia_settings_t        gaia_data;
+#endif            
+    sink_battery_limits battery_limits; 
+    defrag_config          defrag;  
+    uint16                 old_state;
+    uint16                 connection_in_progress; /* flag used to block role switch requests until all connections are complete or abandoned */
+    
+#ifdef ENABLE_SQIFVP  
+    unsigned               partitions_mounted:8;  /* mask of SQIF partitons currently mounted */
+    unsigned               partitions_free:8;     /* mask of SQIF partitions available to use */
+#endif
+    
+#ifdef ENABLE_MAPC
+    /* Data for mapc feature */
+    mapcData_t             mapc_data;    
+#endif    
+    /* runtime data for the currently routed audio source */
+    audio_sources          requested_audio_source;
+    audio_sources          routed_audio_source;
+    
+    /* task data for codec lib */
+    CsrInternalCodecTaskData codec;
+    /*WolfsonCodecTaskData     codec;*//* - if using Wolfson codec */
+    /* Config variable for the remote control */
+#if defined (ENABLE_REMOTE) && defined (ENABLE_SOUNDBAR) 
+    hid_config_t            hidConfig;
+#endif
+   
+#ifdef ENABLE_REMOTE
+    remote_control          remoteControl;
+#endif
+   
+#ifdef ENABLE_SUBWOOFER
+    subwooferData_t         subwoofer;
+#endif
+    
+}runtime_block1_t; 
+
+/* Because of dynamically allocation constraints we have to use a single malloc for different PSKeys */
+typedef struct
+{
+    button_config_type     buttons_duration;
+    ConfigTone_t           gConfigTones;
+    VolMapping_t           gVolMaps[VOL_NUM_VOL_SETTINGS];
+    Timeouts_t             timeouts;
+    pio_config_type        PIOIO;   
+    sink_power_settings power;   
+} config_block1_t;
+
+typedef struct
+{
+#ifdef ENABLE_FM
+    fm_data             sink_fm_data;
+#endif
+    subrate_t           ssr_data;     
+    radio_config_type   radio;
+    rssi_pairing_t      rssi;
+#ifdef ENABLE_WIRED
+    wired_info          wired;
+#endif
+    dsp_data_type       dsp_data;
+    /* Always one termination tone, additional space added in InitConfigMemory */
+    tone_config_type    gEventTones[1]; 
+    /* DONT ADD ANYTHING HERE OR IT WILL GET OVERWRITTEN BY THE TONES */
+} config_block2_t;
+
+
+
+typedef struct 
+{
+    unsigned event:8 ;
+    unsigned at_cmd:8 ;
+    
+} at_cmd_events_t ;
+
+typedef struct 
+{   
+    at_cmd_events_t gEventATCommands[MAX_AT_COMMANDS_TO_SEND] ;    
+    char            at_commands[1];
+} config_block3_t;
+
+typedef struct
+{
+    voice_prompts_index vp_init_params;
+    /* Always one termination prompt, additional space added in InitConfigMemory */
+    tts_config_type     gEventTTSPhrases[1];
+} config_block4_t;
+
+
+/* Sink application data */
+typedef struct
+{
+    /* Main task */
+    TaskData                 task;
+    
+    /* Config variables */
+    ButtonsTaskData          *theButtonsTask;
+    LedTaskData              *theLEDTask;
+    runtime_block1_t         *rundata;
+    config_block1_t          *conf1;
+    config_block2_t          *conf2;
+    config_block3_t          *conf3;
+    config_block4_t          *conf4;
+
+    power_table              *user_power_table;     /* pointer to user power table if available in ps */
+    cvc_plugin_params        cvc_params;
+    HFP_features_type        HFP_supp_features;
+    feature_config_type      features;
+
+    /* Runtime variables */
+    Task                     codec_task ;
+    Sink                     routed_audio;
+    uint16                   NoOfReconnectionAttempts;
+    profile_data_t           profile_data[MAX_MULTIPOINT_CONNECTIONS];
+    a2dp_data                *a2dp_link_data;
+#ifdef ENABLE_AVRCP
+    avrcp_data               *avrcp_link_data;
+#endif    
+    typed_bdaddr             *confirmation_addr;
+    inquiry_data_t           inquiry;
+
+#ifdef ENABLE_PBAP
+    pbapc_data_t             pbapc_data;
+#endif
+#ifdef ENABLE_USB
+    usb_info                 usb;
+#endif  
+    uint16                   config_id;
+
+    /*! Runtime flags*/
+    /*word 1*/
+    unsigned                 PowerOffIsEnabled:1; 
+    unsigned                 SinkInitialising:1;
+    unsigned                 VolumeOrientationIsInverted:1; /*whether or not the vol buttons are inverted*/
+    unsigned                 NetworkIsPresent:1;
+    
+    unsigned                 inquiry_scan_enabled:1;
+    unsigned                 page_scan_enabled:1 ;
+    unsigned                 csr_speech_recognition_is_active:1 ;
+    unsigned                 csr_speech_recognition_tuning_active:1 ;         
+    
+    unsigned                 panic_reconnect:1;              
+    unsigned                 last_outgoing_ag:2 ;   /* which AG made the last outgoing call */
+    unsigned                 tts_enabled:1;
+    
+    unsigned                 confirmation:1;
+    unsigned                 debug_keys_enabled:1;
+    unsigned                 RepeatCallerIDFlag:1;
+    unsigned                 iir_enabled:1;
+    
+    /*word 2*/
+    unsigned                 tts_language:4;
+    
+#ifdef TEXT_TO_SPEECH_LANGUAGESELECTION
+    unsigned                 no_tts_languages:4;
+#endif
+    unsigned                 MultipointEnable:1;
+    unsigned                 powerup_no_connection:1;    /* bit to indicate device has powered and no connections yet */
+    unsigned                 paging_in_progress:1;       /* bit to indicate that device is curretly paging whilst in connectable state */
+    unsigned                 gatt_le:1;
+    
+    unsigned                 battery_state:3;
+    unsigned                 gVolButtonsInverted:1;    /*! whether or not the volume button operation is currently inverted*/  
+   
+    /*word 3*/
+    unsigned                 FailAudioNegotiation:1;
+    unsigned                 RenegotiateSco:1;       
+    unsigned                 lbipmEnable:1;             /* enable Low Battery Intelligent Power Management feature */
+    unsigned                 buttons_locked:1;          /* Flag to indicate if button locking is enabled */
+
+    unsigned                 HeldCallIndex:4;           /* which call to route in the case of multiple held calls */ 
+
+    unsigned                 inquiry_tx:8;
+
+    /*word 4*/
+    unsigned                 MissedCallIndicated:8;
+    unsigned                 gEventQueuedOnConnection:8 ;
+
+    /*word 5*/
+    unsigned                 no_of_profiles_connected:4 ;
+
+    unsigned                 hfp_profiles:3;
+
+    unsigned                 gatt_connection:1;
+    unsigned                 ssr_enabled:1;
+    unsigned                 VoiceRecognitionIsActive:2;
+    unsigned                 unused:5;
+
+#ifdef ISA1200_MOTOR_DRIVER
+	uint16                           isa_freq;
+	uint16                           isa_duty;
+	uint8				isa_dimlev;
+#endif
+
+#ifdef MAX14521E_EL_RAMP_DRIVER
+	uint8 				el_enable;
+	uint8				el_pattern_state;
+	uint8				el_pattern_on;
+	uint8 				el_pattern_interval;
+#endif
+
+} hsTaskData;
+
+/*malloc wrapper with added panic if malloc returns NULL*/
+
+
+#ifdef DEBUG_MALLOC
+    #define mallocPanic(x) MallocPANIC( __FILE__ , __LINE__ ,x) 
+    void * MallocPANIC ( const char file[], int line, size_t pSize ) ;
+    #define freePanic(x) FreePANIC( __FILE__ , __LINE__ ,x) 
+    void FreePANIC ( const char file[], int line, void * ptr ) ;
+#else
+    #define mallocPanic(x) malloc(x)
+    #define freePanic(x) free(x)
+#endif
+
+
+/*the device task data structure - visible to all (so don't pass it between functions!)*/
+extern hsTaskData theSink ;
+
+
+#endif /* SINK_PRIVATE_H_ */

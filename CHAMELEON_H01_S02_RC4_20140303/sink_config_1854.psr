@@ -1,0 +1,90 @@
+#######################################
+## BC4 HS Configurator               ##
+## Generated PSR File                ##
+## Version = MONO_R2_2008            ##
+#######################################
+
+//USR  0 - PSKEY_BATTERY_CONFIG    
+&028a - 
+
+//USR  1 - PSKEY_BUTTON_CONFIG     
+&028b - 
+
+//USR  2 - PSKEY_BUTTON_PATTERN_CON
+&028c - 
+
+//USR  3 - PSKEY_HFP_SUPPORTED_FEAT
+&028d - 
+
+//USR  4 - PSKEY_INPUT_PIO_BLOCK   
+&028e - 
+
+//USR  5 - PSKEY_HFP_1_5_SUPPORTED_
+&028f - 
+
+//USR  6 - PSKEY_TIMEOUTS          
+&0290 - 
+
+//USR  7 - PSKEY_TRI_COLOUR_LEDS   
+&0291 - 
+
+//USR  9 - PSKEY_LENGTHS           
+&0293 - 
+
+//USR 12 - PSKEY_VOLUME_ORIENTATION
+&0296 - 
+
+//USR 13 - PSKEY_RADIO_CONFIG      
+&0297 - 
+
+//USR 15 - PSKEY_FEATURE_BLOCK              
+&0299 =  1330 9C01 11E7 20A0 5800
+
+//USR 16 - PSKEY_SPEAKER_GAIN_MAPPI
+&029a - 
+
+//USR 18 - PSKEY_LED_FILTERS       
+&029c - 
+
+//USR 20 - PSKEY_LED_STATES        
+&029e - 
+
+//USR 22 - PSKEY_LED_EVENTS        
+&02a0 - 
+
+//USR 23 - PSKEY_EVENTS_A          
+&02a1 - 
+
+//USR 24 - PSKEY_EVENTS_B          
+&02a2 - 
+
+//USR 25 - PSKEY_RSSI              
+&02a3 - 
+
+//USR 26 - PSKEY_TONES             
+&02a4 - 
+
+//USR 27 - PSKEY_PIO_BLOCK         
+&02a5 - 
+
+//USR 28 - PSKEY_AURISTREAM_PARAMS 
+&02a6 - 
+
+//USR 29 - PSKEY_ENERGY_PARAMS     
+&02a7 - 
+
+//USR 30 - PSKEY_ONE_TOUCH_DIAL             
+&02a8 -
+
+//USR 31 - PSKEY_CONFIGURATION_ID           
+&02a9 =  0000
+
+//PSKEY_CODEC_PIO - MIC BIAS                
+&01b9 =  00FE
+
+//PSKEY_LOCAL_SUPPORTED_FEATURES            
+&00ef -
+
+//PSKEY_LOCAL_DEVICE_NAME                   
+&0108 =  5343 2D52 4F4D 4F4E 482D 4145 5344 5445 312D 3538 0034
+

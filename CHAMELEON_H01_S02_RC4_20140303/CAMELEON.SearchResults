@@ -1,0 +1,4 @@
+---- pedometer Matches (3 in 3 files) ----
+main.c:		 pedometer(data_accx);
+pedo.c:void pedometer(void* data)
+pedo.h:void pedometer(void* data);
